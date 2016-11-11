@@ -17,3 +17,6 @@
 从容器到主机：`docker cp 容器id：绝对路径 主机目的路径`
 从主机到容器：`docker cp 主机文件 容器id：绝对路径 `
 获取完整的容器ID：`docker inspect '{{.Id}}' 容器名`
+
+### 查看网络中是否有IP冲突
+`arping -I 端口 -b ip地址`
