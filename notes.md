@@ -20,3 +20,6 @@
 
 ### 查看网络中是否有IP冲突
 `arping -I 端口 -b ip地址`
+
+### 利用iptables命令改变端口转发
+`iptables -t nat -A  DOCKER -p tcp --dport 443 -j DNAT --to-destination 192.168.0.191:5000`
