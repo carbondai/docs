@@ -22,3 +22,161 @@ Java web开发中，需要编写Java类实现servlet接口，然后将开发好�
 3. 如果发现servlet是第一次访问，服务器就加载该servet并创建servlet对象，调用其init方法，
 4. 创建一个用于封装http请求消息的HttpServletRequest对象和一个代表http响应消息的HttpServletResponse对象，调用Servlet的service（）方法并将请求和响应对象作为参数传递进去，
 5. web服务器取出response数据回送给浏览器。
+
+### springMVC和Mybatis开发Javaweb项目
+接口加配置文件模式编程。
+controller类中：
+1. 用@Autowired自动装载service接口
+2. 用@RequestMapping实现get方法，在方法体中用model.addAttribute()将service类中的操作方法返回对象与jsp页面中要展示的变量名关联起来，get方法的返回值为jsp地址的中间部分
+3. 用@RequestMapping实现post方法，在其参数中加上method=RequestMethod.POST，同时加上produces={"application/json;charset=UTF-8"}指定文件格式和编码，然后添加@ResponseBody注解，在方法体中用service类的操作方法操作对象
+4. 每个service接口有一个对应的实现类，在service接口的实现类中，装载了Mapper接口，其中定义的方法名与Mybatis对应定义的Mapper.xml文件中的sql语句的id一致
+5. 通过在spring.xml中配置sqlSessionFactory和MapperScannerConfigurer，将Mapper接口和Mapper.xml文件关联起来
+下面以代码为例，展示用法：
+```
+GoodsController.java
+/**
+ *商品展示
+ */
+@Controller
+public class GoodsController
+{
+	@Autowired
+	private GoodsService goodsService;
+	
+	@RequestMapping("/buy")
+	public String buy(Model model, String detailgId)
+	{
+		goodsList.clear();
+		goodsList.add(goodsService.findDetail(detailgId));
+        
+		model.addAttribute("buyingList", goodsList);
+		return "/goods/buy";
+	}
+}
+```
+
+```
+GoodsService.java
+public interface GoodsService
+{
+    /** find all goods **/
+    List<Goods> findAllGoods();
+
+    /** find goods by keyword*/
+    List<Goods> queryByKeyword(String keyword);
+
+    /** find goods by id*/
+    Goods findDetail(String gId);
+}
+
+GoodsServiceImpl.java
+@Service
+public class GoodsServiceImpl implements GoodsService
+{
+    @Autowired
+    private GoodsMapper goodsMapper;
+
+    @Override
+    public List<Goods> findAllGoods()
+	{
+        return goodsMapper.selectAll();
+    }
+
+    @Override
+    public List<Goods> queryByKeyword(String keyword)
+    {
+        return goodsMapper.selectByCondition(keyword);
+    }
+    
+    @Override
+    public Goods findDetail(String gId)
+    {
+        return goodsMapper.selectBygId(Integer.parseInt(gId));
+    }    
+}
+```
+
+```
+GoodsMapper.java
+public interface GoodsMapper {
+    
+    List<Goods> selectAll();
+
+    List<Goods> selectByCondition(@Param("keyword") String keyword);
+
+    Goods selectBygId(int gId);
+}
+```
+
+```
+GoodsMapper.xml
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="lyons.common.mapper.goods.GoodsMapper">
+  <resultMap id="BaseResultMap" type="Goods">
+    <result column="G_ID" jdbcType="INTEGER" property="gId" />
+    <result column="G_NAME" jdbcType="VARCHAR" property="gName" />
+    <result column="G_DESCRIBE" jdbcType="VARCHAR" property="gDescribe" />
+    <result column="G_PRICE" jdbcType="DOUBLE" property="gPrice" />
+    <result column="G_MADE" jdbcType="VARCHAR" property="gMade" />
+    <result column="G_AMOUNT" jdbcType="INTEGER" property="gAmount" />
+    <result column="G_CREATE_DATE" jdbcType="TIMESTAMP" property="gCreateDate" />
+    <result column="G_PIC" jdbcType="VARCHAR" property="gPic" />
+  </resultMap>
+  
+  <sql id="Base_Column_List">
+    G_ID, G_NAME, G_DESCRIBE, G_PRICE, G_MADE, G_AMOUNT, G_CREATE_DATE, G_PIC
+  </sql>
+  
+  <select id="selectAll" resultMap="BaseResultMap">
+    SELECT
+    <include refid="Base_Column_List" />
+    FROM goods
+  </select>
+  
+  <select id="selectBygId" parameterType="INTEGER" resultMap="BaseResultMap">
+    SELECT
+    <include refid="Base_Column_List" />
+    FROM goods
+    where g_id = #{gId}
+  </select>
+  
+  <select id="selectByCondition" parameterType="String" resultMap="BaseResultMap">
+  	SELECT
+    <include refid="Base_Column_List" />
+    FROM goods
+    WHERE g_name LIKE '%'|| #{keyword} ||'%'
+  </select>
+```
+
+```
+spring.xml
+<!--3.配置SqlSessionFactory对象-->
+    <bean id="sqlSessionFactory" class="org.mybatis.spring.SqlSessionFactoryBean">
+        <!--往下才是mybatis和spring真正整合的配置-->
+        <!--注入数据库连接池-->
+        <property name="dataSource" ref="dataSource"/>
+        <!--配置mybatis全局配置文件:mybatisConfig.xml-->
+        <property name="configLocation" value="classpath:config/mybatis/mybatisConfig.xml"/>
+        <!--扫描entity包,使用别名,多个用;隔开-->
+        <property name="typeAliasesPackage" value="lyons.common.model"/>
+        <!--扫描sql配置文件:mapper需要的xml文件-->
+        <property name="mapperLocations" value="classpath:config/mybatis/*Mapper.xml"/>
+    </bean>
+    
+	<bean id="sqlSessionTemplate" class="org.mybatis.spring.SqlSessionTemplate">
+		<constructor-arg index="0" ref="sqlSessionFactory" />
+	</bean>
+	
+    <!-- 4:配置扫描Dao接口包,动态实现DAO接口,注入到spring容器-->
+    <bean class="org.mybatis.spring.mapper.MapperScannerConfigurer">
+        <!--注入SqlSessionFactory-->
+        <property name="sqlSessionFactoryBeanName" value="sqlSessionFactory"/>
+        <!-- 给出需要扫描的Dao接口-->
+        <property name="basePackage" value="lyons.common.mapper.*"/>
+    </bean>
+```
+    
+        
+    
+
