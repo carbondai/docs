@@ -35,5 +35,12 @@
 2. 需求：
 让虚拟机和调试机直连能ping通
 3. 解决方法：
-在调试机上加一条静态路由 `route add -net 192.168.122.0 netmask 255.255.255.0 gw 192.168.0.211`
-
+在调试机上加一条静态路由
+ `route add -net 192.168.122.0 netmask 255.255.255.0 gw 192.168.0.211 dev eno1`
+在centos7中，开始使用ip route来代替route命令了，上面这条命令可以用
+`ip route add 192.168.122.0/24 via 192.168.0.211 dev eno1`来代替
+用命令添加的重启机器就失效了，如果想要永久，需要在/etc/sysconfig/network-scripts/目录下创建对应的
+route-eno1文件，在其中添加
+`192.168.122.0/24 via 192.168.0.211 dev eno1`，
+然后重启机器或者
+`ifdown eno1 && ifup eno1`
