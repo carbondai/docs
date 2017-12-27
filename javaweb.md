@@ -1,3 +1,6 @@
+### 发布javaweb项目的流程
+将开发测试完成后的项目打包成war格式，在idea中流程为build->artifacts->war:archive，在output目录下会找到.war文件，在服务器端部署tomcat，将war包拷贝至tomcat下的webapps目录中，运行tomcat即可
+
 ### idea中配置tomcat
 点击Run->Edit Configuration，左上角+，选择tomcat server local进行配置，然后切换标签Deployment，点击+，选择artifacts，如果没有，则点击File->Project Structure，Artifacts选项，点击+，选择web application：exploded，Modules选项，Dependencies标签，点击+，可添加外部依赖库。
 
